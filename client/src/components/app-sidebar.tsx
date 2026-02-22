@@ -27,6 +27,7 @@ import {
   ScanBarcode,
   Sparkles,
   Gift,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -40,6 +41,7 @@ const customerItems = [
   { title: "My Orders", url: "/orders", icon: Receipt },
   { title: "Offers", url: "/offers", icon: Gift },
   { title: "AI Assistant", url: "/ai-assistant", icon: Sparkles },
+  { title: "Store Map", url: "/store-map", icon: MapPin },
 ];
 
 const adminItems = [

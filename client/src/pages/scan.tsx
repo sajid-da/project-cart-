@@ -33,7 +33,7 @@ export default function ScanPage() {
   const [scanning, setScanning] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
   const scannerRef = useRef<any>(null);
-  const readerRef = useRef<HTMLDivElement>(null);
+  const scannerContainerRef = useRef<HTMLDivElement>(null);
 
   const lookupBarcode = useMutation({
     mutationFn: async (barcode: string) => {
@@ -99,10 +99,20 @@ export default function ScanPage() {
   const startScanner = useCallback(async () => {
     try {
       const { Html5Qrcode } = await import("html5-qrcode");
+
       if (scannerRef.current) {
         try { await scannerRef.current.stop(); } catch {}
+        scannerRef.current = null;
       }
-      const scanner = new Html5Qrcode("barcode-reader");
+
+      if (scannerContainerRef.current) {
+        scannerContainerRef.current.innerHTML = "";
+        const readerDiv = document.createElement("div");
+        readerDiv.id = "barcode-reader-element";
+        scannerContainerRef.current.appendChild(readerDiv);
+      }
+
+      const scanner = new Html5Qrcode("barcode-reader-element");
       scannerRef.current = scanner;
       setScanning(true);
 
@@ -112,12 +122,13 @@ export default function ScanPage() {
         (decodedText: string) => {
           lookupBarcode.mutate(decodedText);
           scanner.stop().catch(() => {});
+          scannerRef.current = null;
           setScanning(false);
         },
         () => {}
       );
-    } catch (err) {
-      toast({ title: "Camera Error", description: "Could not access camera. Please enter barcode manually.", variant: "destructive" });
+    } catch (err: any) {
+      toast({ title: "Camera Error", description: "Could not access camera. Try entering barcode manually.", variant: "destructive" });
       setScanning(false);
     }
   }, [token]);
@@ -125,6 +136,10 @@ export default function ScanPage() {
   const stopScanner = useCallback(async () => {
     if (scannerRef.current) {
       try { await scannerRef.current.stop(); } catch {}
+      scannerRef.current = null;
+    }
+    if (scannerContainerRef.current) {
+      scannerContainerRef.current.innerHTML = "";
     }
     setScanning(false);
   }, []);
@@ -133,6 +148,7 @@ export default function ScanPage() {
     return () => {
       if (scannerRef.current) {
         try { scannerRef.current.stop(); } catch {}
+        scannerRef.current = null;
       }
     };
   }, []);
@@ -162,18 +178,16 @@ export default function ScanPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div
-              id="barcode-reader"
-              ref={readerRef}
-              className="w-full rounded-lg overflow-hidden bg-muted min-h-[200px] flex items-center justify-center"
+              ref={scannerContainerRef}
+              className="w-full rounded-lg overflow-hidden bg-muted min-h-[200px]"
               data-testid="barcode-reader"
-            >
-              {!scanning && (
-                <div className="text-center text-muted-foreground p-6">
-                  <ScanBarcode className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Camera preview will appear here</p>
-                </div>
-              )}
-            </div>
+            />
+            {!scanning && (
+              <div className="text-center text-muted-foreground py-2">
+                <ScanBarcode className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                <p className="text-sm">Click "Start Scanning" to use camera</p>
+              </div>
+            )}
             <div className="flex gap-2">
               {!scanning ? (
                 <Button onClick={startScanner} className="flex-1" data-testid="button-start-scan">
@@ -215,7 +229,14 @@ export default function ScanPage() {
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground font-medium">Try sample barcodes:</p>
               <div className="flex flex-wrap gap-1.5">
-                {["8901063010017", "8901262150019", "8901725181109", "8901176013488", "8904004400163", "8901233020297"].map((code) => (
+                {[
+                  { code: "8901063010017", name: "Bananas" },
+                  { code: "8901262150019", name: "Amul Milk" },
+                  { code: "8901725181109", name: "Basmati Rice" },
+                  { code: "8901176013488", name: "Tata Tea" },
+                  { code: "8904004400163", name: "Aloo Bhujia" },
+                  { code: "8901233020297", name: "Dairy Milk" },
+                ].map(({ code, name }) => (
                   <Badge
                     key={code}
                     variant="outline"
@@ -223,7 +244,7 @@ export default function ScanPage() {
                     onClick={() => { setManualBarcode(code); lookupBarcode.mutate(code); }}
                     data-testid={`badge-sample-barcode-${code}`}
                   >
-                    {code}
+                    {name}
                   </Badge>
                 ))}
               </div>
@@ -239,13 +260,13 @@ export default function ScanPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
           >
-            <Card className="border-primary/30">
+            <Card className="border-primary/30" data-testid="card-scanned-product">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg" data-testid="text-product-name">
                     {scannedProduct.product.name}
                   </CardTitle>
-                  <Badge variant={scannedProduct.source === "local" ? "default" : "secondary"}>
+                  <Badge variant={scannedProduct.source === "local" ? "default" : "secondary"} data-testid="badge-product-source">
                     {scannedProduct.source === "local" ? "In Store" : "Open Food Facts"}
                   </Badge>
                 </div>
@@ -324,13 +345,33 @@ export default function ScanPage() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {aiAnalysis && (
+        {analyzeProduct.isPending && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
           >
             <Card className="border-purple-500/30">
+              <CardContent className="flex items-center gap-4 py-6">
+                <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+                <div>
+                  <p className="font-medium">AI is analyzing this product...</p>
+                  <p className="text-sm text-muted-foreground">Checking ingredients, health score, and alternatives</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {aiAnalysis && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+          >
+            <Card className="border-purple-500/30" data-testid="card-ai-analysis">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-purple-500" /> AI Product Analysis

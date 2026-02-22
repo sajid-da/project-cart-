@@ -1,13 +1,12 @@
 import { useAuth } from "@/lib/auth";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
-import { Sparkles, ShoppingCart, Lightbulb, ArrowRight, RefreshCw, Star } from "lucide-react";
+import { Sparkles, ShoppingCart, Lightbulb, RefreshCw, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface Recommendation {
@@ -26,15 +25,17 @@ export default function AIAssistantPage() {
   const { token } = useAuth();
   const { toast } = useToast();
 
-  const { data, isLoading, refetch, isFetching } = useQuery<AIRecommendations>({
+  const { data, isLoading, refetch, isFetching, error } = useQuery<AIRecommendations>({
     queryKey: ["/api/ai/recommendations"],
     queryFn: async () => {
       const res = await fetch("/api/ai/recommendations", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) throw new Error("Failed to get recommendations");
       return res.json();
     },
+    retry: 1,
+    staleTime: 60000,
   });
 
   const addToCart = useMutation({
@@ -62,18 +63,6 @@ export default function AIAssistantPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="p-4 md:p-6 space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-24" />
-        <div className="grid gap-4 md:grid-cols-2">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-40" />)}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-4xl mx-auto">
       <div className="flex items-start justify-between">
@@ -95,7 +84,31 @@ export default function AIAssistantPage() {
         </Button>
       </div>
 
-      {data?.tip && (
+      {(isLoading || isFetching) && (
+        <Card className="border-purple-500/30 bg-purple-500/5">
+          <CardContent className="flex items-center gap-4 py-8">
+            <Loader2 className="w-10 h-10 text-purple-500 animate-spin flex-shrink-0" />
+            <div>
+              <p className="font-medium text-lg">AI is thinking...</p>
+              <p className="text-sm text-muted-foreground">Analyzing your shopping patterns and finding the best deals. This may take a few seconds.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {error && !isLoading && !isFetching && (
+        <Card className="border-destructive/30">
+          <CardContent className="text-center py-8">
+            <p className="text-lg font-medium text-destructive">Could not load recommendations</p>
+            <p className="text-muted-foreground mt-1">Please try refreshing</p>
+            <Button variant="outline" className="mt-4" onClick={() => refetch()} data-testid="button-retry-recommendations">
+              <RefreshCw className="w-4 h-4 mr-2" /> Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {!isLoading && !isFetching && data?.tip && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="border-purple-500/30 bg-purple-500/5">
             <CardContent className="flex items-start gap-3 py-4">
@@ -109,47 +122,49 @@ export default function AIAssistantPage() {
         </motion.div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {data?.recommendations?.map((rec, index) => (
-          <motion.div
-            key={rec.productName}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-          >
-            <Card className="h-full" data-testid={`card-recommendation-${index}`}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">{rec.product?.name || rec.productName}</CardTitle>
-                  <Badge className={priorityColor(rec.priority)}>{rec.priority}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm text-muted-foreground">{rec.reason}</p>
-                {rec.product && (
+      {!isLoading && !isFetching && data?.recommendations && data.recommendations.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {data.recommendations.map((rec, index) => (
+            <motion.div
+              key={rec.productName}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <Card className="h-full" data-testid={`card-recommendation-${index}`}>
+                <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-bold text-primary">₹{Number(rec.product.price).toFixed(2)}</span>
-                      <Badge variant="outline" className="text-xs">{rec.product.unit}</Badge>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={() => addToCart.mutate(rec.product.id)}
-                      disabled={addToCart.isPending}
-                      data-testid={`button-add-rec-${index}`}
-                    >
-                      <ShoppingCart className="w-3.5 h-3.5 mr-1.5" />
-                      Add
-                    </Button>
+                    <CardTitle className="text-base" data-testid={`text-rec-name-${index}`}>{rec.product?.name || rec.productName}</CardTitle>
+                    <Badge className={priorityColor(rec.priority)} data-testid={`badge-priority-${index}`}>{rec.priority}</Badge>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground" data-testid={`text-rec-reason-${index}`}>{rec.reason}</p>
+                  {rec.product && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-bold text-primary" data-testid={`text-rec-price-${index}`}>₹{Number(rec.product.price).toFixed(2)}</span>
+                        <Badge variant="outline" className="text-xs">{rec.product.unit}</Badge>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => addToCart.mutate(rec.product.id)}
+                        disabled={addToCart.isPending}
+                        data-testid={`button-add-rec-${index}`}
+                      >
+                        <ShoppingCart className="w-3.5 h-3.5 mr-1.5" />
+                        Add
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      )}
 
-      {(!data?.recommendations || data.recommendations.length === 0) && (
+      {!isLoading && !isFetching && !error && (!data?.recommendations || data.recommendations.length === 0) && (
         <Card>
           <CardContent className="text-center py-12">
             <Sparkles className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
