@@ -27,6 +27,7 @@ import OffersPage from "@/pages/offers";
 import AIAssistantPage from "@/pages/ai-assistant";
 import StoreMapPage from "@/pages/store-map";
 import AdminCustomers from "@/pages/admin-customers";
+import AdminSalesReport from "@/pages/admin-sales-report";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -99,6 +100,7 @@ function AppRoutes() {
         <Route path="/admin/users">{() => <AdminRoute component={AdminUsers} />}</Route>
         <Route path="/admin/fraud">{() => <AdminRoute component={AdminFraud} />}</Route>
         <Route path="/admin/customers">{() => <AdminRoute component={AdminCustomers} />}</Route>
+        <Route path="/admin/sales-report">{() => <AdminRoute component={AdminSalesReport} />}</Route>
         <Route component={NotFound} />
       </Switch>
     </AuthenticatedLayout>

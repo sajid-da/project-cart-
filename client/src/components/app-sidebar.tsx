@@ -28,6 +28,7 @@ import {
   Sparkles,
   Gift,
   MapPin,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -51,7 +52,8 @@ const adminItems = [
   { title: "Inventory", url: "/admin/inventory", icon: Boxes },
   { title: "Orders", url: "/admin/orders", icon: Receipt },
   { title: "Coupons", url: "/admin/coupons", icon: Tag },
-  { title: "Customer Analysis", url: "/admin/customers", icon: BarChart3 },
+  { title: "Customer Analysis", url: "/admin/customers", icon: Users },
+  { title: "Sales Report", url: "/admin/sales-report", icon: FileText },
   { title: "Users", url: "/admin/users", icon: Users },
   { title: "Fraud Monitor", url: "/admin/fraud", icon: Shield },
 ];

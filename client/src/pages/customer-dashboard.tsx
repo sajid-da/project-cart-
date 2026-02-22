@@ -12,8 +12,11 @@ import {
   TrendingUp,
   ArrowRight,
   Sparkles,
+  ScanBarcode,
+  Gift,
+  MapPin,
+  Camera,
 } from "lucide-react";
-import { getQueryFn } from "@/lib/queryClient";
 import { motion } from "framer-motion";
 
 export default function CustomerDashboard() {
@@ -41,6 +44,17 @@ export default function CustomerDashboard() {
     },
   });
 
+  const { data: offers } = useQuery<any[]>({
+    queryKey: ["/api/offers"],
+    queryFn: async () => {
+      const res = await fetch("/api/offers", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+  });
+
   const statCards = [
     {
       title: "Active Cart",
@@ -60,7 +74,7 @@ export default function CustomerDashboard() {
     },
     {
       title: "Total Spent",
-      value: `₹${Number(stats?.totalSpent ?? 0).toFixed(2)}`,
+      value: `₹${Number(stats?.totalSpent ?? 0).toFixed(0)}`,
       label: "lifetime",
       icon: TrendingUp,
       color: "text-chart-4",
@@ -76,6 +90,8 @@ export default function CustomerDashboard() {
     },
   ];
 
+  const todayOffers = offers?.filter((o: any) => o.isApplicableToday) || [];
+
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -87,12 +103,39 @@ export default function CustomerDashboard() {
             Here's what's happening with your shopping today
           </p>
         </div>
-        <Link href="/products">
-          <Button data-testid="button-browse-products">
-            Browse Products <ArrowRight className="w-4 h-4 ml-1" />
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/scan">
+            <Button variant="default" data-testid="button-scan-product">
+              <Camera className="w-4 h-4 mr-2" /> Scan Product
+            </Button>
+          </Link>
+          <Link href="/products">
+            <Button variant="outline" data-testid="button-browse-products">
+              Browse Products <ArrowRight className="w-4 h-4 ml-1" />
+            </Button>
+          </Link>
+        </div>
       </div>
+
+      <Link href="/scan">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Card className="border-primary/30 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 cursor-pointer" data-testid="card-scan-cta">
+            <CardContent className="flex items-center gap-4 py-5">
+              <div className="p-3 rounded-xl bg-primary/10">
+                <ScanBarcode className="w-8 h-8 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-base">Scan a Product Barcode</p>
+                <p className="text-sm text-muted-foreground">Use your camera to scan any product barcode for instant price, details, and AI insights</p>
+              </div>
+              <ArrowRight className="w-5 h-5 text-primary" />
+            </CardContent>
+          </Card>
+        </motion.div>
+      </Link>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat, i) => (
@@ -128,6 +171,50 @@ export default function CustomerDashboard() {
         ))}
       </div>
 
+      <div className="grid gap-4 md:grid-cols-3">
+        <Link href="/offers">
+          <Card className="hover-elevate cursor-pointer h-full">
+            <CardContent className="flex items-center gap-3 py-5">
+              <div className="p-2 rounded-lg bg-red-500/10">
+                <Gift className="w-5 h-5 text-red-500" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">Today's Offers</p>
+                <p className="text-xs text-muted-foreground">
+                  {todayOffers.length > 0 ? `${todayOffers.length} active offer${todayOffers.length > 1 ? "s" : ""} available` : "Check available deals"}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/ai-assistant">
+          <Card className="hover-elevate cursor-pointer h-full">
+            <CardContent className="flex items-center gap-3 py-5">
+              <div className="p-2 rounded-lg bg-purple-500/10">
+                <Sparkles className="w-5 h-5 text-purple-500" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">AI Shopping Assistant</p>
+                <p className="text-xs text-muted-foreground">Get personalized recommendations</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/store-map">
+          <Card className="hover-elevate cursor-pointer h-full">
+            <CardContent className="flex items-center gap-3 py-5">
+              <div className="p-2 rounded-lg bg-blue-500/10">
+                <MapPin className="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">Store Map</p>
+                <p className="text-xs text-muted-foreground">Navigate to products in-store</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+
       {recommendations && recommendations.length > 0 && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0">
@@ -143,15 +230,22 @@ export default function CustomerDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {recommendations.slice(0, 4).map((product: any) => (
+              {recommendations.slice(0, 8).map((product: any) => (
                 <div
                   key={product.id}
                   className="flex flex-col gap-2 p-3 rounded-md bg-muted/50 hover-elevate"
                   data-testid={`card-recommendation-${product.id}`}
                 >
+                  {product.imageUrl && (
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name}
+                      className="w-full h-28 object-cover rounded-md"
+                    />
+                  )}
                   <div className="flex items-center justify-between gap-1">
                     <span className="font-medium text-sm truncate">{product.name}</span>
-                    <Badge variant="secondary">₹{Number(product.price).toFixed(2)}</Badge>
+                    <Badge variant="secondary">₹{Number(product.price).toFixed(0)}</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>
                 </div>
