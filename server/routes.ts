@@ -391,6 +391,15 @@ export async function registerRoutes(
     res.json(logs);
   });
 
+  app.get("/api/admin/customer-analysis", authMiddleware as any, adminMiddleware as any, async (req, res) => {
+    try {
+      const customerAnalysis = await storage.getCustomerPurchaseAnalysis();
+      res.json(customerAnalysis);
+    } catch (err: any) {
+      res.status(500).json({ message: "Failed to load customer analysis" });
+    }
+  });
+
   // Barcode lookup - check local DB first, then Open Food Facts
   app.get("/api/barcode/:barcode", authMiddleware as any, async (req, res) => {
     try {

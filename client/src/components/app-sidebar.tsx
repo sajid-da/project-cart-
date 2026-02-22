@@ -51,6 +51,7 @@ const adminItems = [
   { title: "Inventory", url: "/admin/inventory", icon: Boxes },
   { title: "Orders", url: "/admin/orders", icon: Receipt },
   { title: "Coupons", url: "/admin/coupons", icon: Tag },
+  { title: "Customer Analysis", url: "/admin/customers", icon: BarChart3 },
   { title: "Users", url: "/admin/users", icon: Users },
   { title: "Fraud Monitor", url: "/admin/fraud", icon: Shield },
 ];

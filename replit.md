@@ -34,7 +34,8 @@ shared/
 ## Key Features
 - **Auth**: JWT login/register with account lockout after 5 failed attempts
 - **Product Catalog**: Searchable/filterable product listing with categories, INR pricing
-- **Barcode Scanner**: Camera-based barcode scanning with html5-qrcode + manual entry + Open Food Facts API fallback
+- **Barcode Scanner**: Prominent camera-based barcode scanning with html5-qrcode + manual entry + scanning tips + Open Food Facts API fallback
+- **Customer Purchase Analysis**: Manager/admin dashboard showing per-customer buying patterns, top products, category spending, payment methods, and recent orders
 - **AI Product Analysis**: Ingredient analysis, health scoring, benefits/warnings, alternatives via OpenAI
 - **AI Recommendations**: Personalized shopping recommendations based on purchase history and available offers
 - **Cart**: Add/remove/update quantities, real-time subtotal calculation in ₹

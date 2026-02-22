@@ -72,6 +72,7 @@ export interface IStorage {
   getOffers(): Promise<Offer[]>;
   getActiveOffers(): Promise<any[]>;
   createOffer(offer: InsertOffer): Promise<Offer>;
+  getCustomerPurchaseAnalysis(): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -463,6 +464,100 @@ export class DatabaseStorage implements IStorage {
   async createOffer(offer: InsertOffer) {
     const [created] = await db.insert(offers).values(offer).returning();
     return created;
+  }
+
+  async getCustomerPurchaseAnalysis() {
+    const allOrders = await db.select().from(orders).orderBy(desc(orders.createdAt));
+    const allUsers = await db.select().from(users).where(eq(users.role, "customer"));
+    const analysis = [];
+
+    for (const user of allUsers) {
+      const userOrders = allOrders.filter(o => o.userId === user.id);
+      if (userOrders.length === 0) continue;
+
+      const orderItemsList = [];
+      for (const order of userOrders) {
+        const items = await db.select().from(orderItems).where(eq(orderItems.orderId, order.id));
+        for (const item of items) {
+          const [product] = await db.select().from(products).where(eq(products.id, item.productId));
+          if (product) {
+            let [cat] = product.categoryId
+              ? await db.select().from(categories).where(eq(categories.id, product.categoryId))
+              : [null];
+            orderItemsList.push({
+              ...item,
+              product,
+              category: cat,
+              orderDate: order.createdAt,
+              orderStatus: order.status,
+            });
+          }
+        }
+      }
+
+      const totalSpent = userOrders.reduce((acc, o) => acc + Number(o.total), 0);
+      const avgOrderValue = totalSpent / userOrders.length;
+
+      const productFrequency: Record<string, { product: any; count: number; totalSpent: number }> = {};
+      for (const item of orderItemsList) {
+        const key = String(item.productId);
+        if (!productFrequency[key]) {
+          productFrequency[key] = { product: item.product, count: 0, totalSpent: 0 };
+        }
+        productFrequency[key].count += item.quantity;
+        productFrequency[key].totalSpent += Number(item.price) * item.quantity;
+      }
+
+      const topProducts = Object.values(productFrequency)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+      const categoryBreakdown: Record<string, { name: string; count: number; spent: number }> = {};
+      for (const item of orderItemsList) {
+        const catName = item.category?.name || "Uncategorized";
+        if (!categoryBreakdown[catName]) {
+          categoryBreakdown[catName] = { name: catName, count: 0, spent: 0 };
+        }
+        categoryBreakdown[catName].count += item.quantity;
+        categoryBreakdown[catName].spent += Number(item.price) * item.quantity;
+      }
+
+      const paymentsList = [];
+      for (const order of userOrders) {
+        const [payment] = await db.select().from(payments).where(eq(payments.orderId, order.id));
+        if (payment) paymentsList.push(payment);
+      }
+      const paymentMethods: Record<string, number> = {};
+      for (const p of paymentsList) {
+        paymentMethods[p.method] = (paymentMethods[p.method] || 0) + 1;
+      }
+
+      analysis.push({
+        customer: {
+          id: user.id,
+          fullName: user.fullName,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+        },
+        totalOrders: userOrders.length,
+        totalSpent: totalSpent.toFixed(2),
+        avgOrderValue: avgOrderValue.toFixed(2),
+        totalItemsBought: orderItemsList.reduce((acc, item) => acc + item.quantity, 0),
+        topProducts,
+        categoryBreakdown: Object.values(categoryBreakdown).sort((a, b) => b.spent - a.spent),
+        paymentMethods,
+        lastOrderDate: userOrders[0]?.createdAt,
+        recentOrders: userOrders.slice(0, 5).map(o => ({
+          id: o.id,
+          total: o.total,
+          status: o.status,
+          date: o.createdAt,
+        })),
+      });
+    }
+
+    return analysis.sort((a, b) => Number(b.totalSpent) - Number(a.totalSpent));
   }
 
   private generateTrendData() {

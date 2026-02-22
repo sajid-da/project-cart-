@@ -168,46 +168,55 @@ export default function ScanPage() {
         <p className="text-muted-foreground mt-1">Scan a barcode to find product details, price, and AI-powered insights</p>
       </div>
 
+      <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2">
+            <Camera className="w-6 h-6 text-primary" /> Camera Barcode Scanner
+          </CardTitle>
+          <CardDescription className="text-sm">
+            Point your phone's camera at any product barcode to instantly look it up. Works with all standard barcodes on Indian products.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div
+            ref={scannerContainerRef}
+            className="w-full rounded-lg overflow-hidden bg-muted min-h-[250px] border-2 border-dashed border-primary/20"
+            data-testid="barcode-reader"
+          />
+          {!scanning && (
+            <motion.div
+              className="text-center py-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
+                <Camera className="w-8 h-8 text-primary" />
+              </div>
+              <p className="font-medium text-sm">Tap the button below to open your camera</p>
+              <p className="text-xs text-muted-foreground mt-1">Position the barcode within the scanning area</p>
+            </motion.div>
+          )}
+          <div className="flex gap-2">
+            {!scanning ? (
+              <Button onClick={startScanner} size="lg" className="flex-1" data-testid="button-start-scan">
+                <Camera className="w-5 h-5 mr-2" /> Open Camera & Scan Barcode
+              </Button>
+            ) : (
+              <Button onClick={stopScanner} variant="destructive" size="lg" className="flex-1" data-testid="button-stop-scan">
+                <X className="w-5 h-5 mr-2" /> Stop Camera
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <Camera className="w-5 h-5" /> Camera Scanner
+              <Search className="w-5 h-5" /> Manual Barcode Entry
             </CardTitle>
-            <CardDescription>Point your camera at a product barcode</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div
-              ref={scannerContainerRef}
-              className="w-full rounded-lg overflow-hidden bg-muted min-h-[200px]"
-              data-testid="barcode-reader"
-            />
-            {!scanning && (
-              <div className="text-center text-muted-foreground py-2">
-                <ScanBarcode className="w-10 h-10 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">Click "Start Scanning" to use camera</p>
-              </div>
-            )}
-            <div className="flex gap-2">
-              {!scanning ? (
-                <Button onClick={startScanner} className="flex-1" data-testid="button-start-scan">
-                  <Camera className="w-4 h-4 mr-2" /> Start Scanning
-                </Button>
-              ) : (
-                <Button onClick={stopScanner} variant="destructive" className="flex-1" data-testid="button-stop-scan">
-                  <X className="w-4 h-4 mr-2" /> Stop
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Search className="w-5 h-5" /> Manual Entry
-            </CardTitle>
-            <CardDescription>Enter a barcode number manually</CardDescription>
+            <CardDescription>Type or paste a barcode number to look up</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-2">
@@ -249,6 +258,42 @@ export default function ScanPage() {
                 ))}
               </div>
             </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <ScanBarcode className="w-5 h-5" /> Scanning Tips
+            </CardTitle>
+            <CardDescription>Get the best scanning results</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-3 text-sm">
+              <li className="flex items-start gap-2">
+                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-xs font-bold text-primary">1</span>
+                </div>
+                <span>Hold the product barcode steady within the camera frame</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-xs font-bold text-primary">2</span>
+                </div>
+                <span>Ensure good lighting - avoid shadows on the barcode</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-xs font-bold text-primary">3</span>
+                </div>
+                <span>Keep about 6-8 inches distance from the barcode</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-xs font-bold text-primary">4</span>
+                </div>
+                <span>All standard Indian product barcodes (EAN-13) are supported</span>
+              </li>
+            </ul>
           </CardContent>
         </Card>
       </div>
