@@ -2,13 +2,14 @@ import { db } from "./db";
 import { eq, desc, sql, and, count, sum, lt, gt, gte, lte } from "drizzle-orm";
 import {
   users, categories, products, inventory, carts, cartItems,
-  orders, orderItems, payments, coupons, fraudLogs, activityLogs,
+  orders, orderItems, payments, coupons, fraudLogs, activityLogs, offers,
   type User, type InsertUser, type Category, type InsertCategory,
   type Product, type InsertProduct, type Inventory, type InsertInventory,
   type Cart, type InsertCart, type CartItem, type InsertCartItem,
   type Order, type InsertOrder, type OrderItem, type InsertOrderItem,
   type Payment, type InsertPayment, type Coupon, type InsertCoupon,
   type FraudLog, type InsertFraudLog, type ActivityLog, type InsertActivityLog,
+  type Offer, type InsertOffer,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -66,6 +67,11 @@ export interface IStorage {
   getAnalyticsData(): Promise<any>;
   getCustomerDashboardStats(userId: number): Promise<any>;
   getRecommendations(userId: number): Promise<Product[]>;
+
+  getProductByBarcode(barcode: string): Promise<Product | undefined>;
+  getOffers(): Promise<Offer[]>;
+  getActiveOffers(): Promise<any[]>;
+  createOffer(offer: InsertOffer): Promise<Offer>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -421,6 +427,42 @@ export class DatabaseStorage implements IStorage {
 
   async getRecommendations(userId: number) {
     return db.select().from(products).where(eq(products.isActive, true)).orderBy(sql`RANDOM()`).limit(8);
+  }
+
+  async getProductByBarcode(barcode: string) {
+    const [product] = await db.select().from(products).where(eq(products.barcode, barcode));
+    return product;
+  }
+
+  async getOffers() {
+    return db.select().from(offers).orderBy(desc(offers.createdAt));
+  }
+
+  async getActiveOffers() {
+    const allOffers = await db.select().from(offers).where(eq(offers.isActive, true));
+    const today = new Date();
+    const dayName = today.toLocaleDateString("en-US", { weekday: "long" });
+
+    const activeOffers = [];
+    for (const offer of allOffers) {
+      const isApplicableToday = !offer.applicableDays || offer.applicableDays.length === 0 || offer.applicableDays.includes(dayName);
+      let category = null;
+      if (offer.categoryId) {
+        const [cat] = await db.select().from(categories).where(eq(categories.id, offer.categoryId));
+        category = cat;
+      }
+      activeOffers.push({
+        ...offer,
+        category,
+        isApplicableToday,
+      });
+    }
+    return activeOffers;
+  }
+
+  async createOffer(offer: InsertOffer) {
+    const [created] = await db.insert(offers).values(offer).returning();
+    return created;
   }
 
   private generateTrendData() {

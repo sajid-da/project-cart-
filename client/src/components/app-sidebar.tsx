@@ -24,6 +24,9 @@ import {
   LogOut,
   Store,
   Receipt,
+  ScanBarcode,
+  Sparkles,
+  Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -31,9 +34,12 @@ import { Badge } from "@/components/ui/badge";
 
 const customerItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Scan Product", url: "/scan", icon: ScanBarcode },
   { title: "Products", url: "/products", icon: Package },
   { title: "My Cart", url: "/cart", icon: ShoppingCart },
   { title: "My Orders", url: "/orders", icon: Receipt },
+  { title: "Offers", url: "/offers", icon: Gift },
+  { title: "AI Assistant", url: "/ai-assistant", icon: Sparkles },
 ];
 
 const adminItems = [

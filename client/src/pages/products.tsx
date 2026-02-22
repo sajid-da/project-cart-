@@ -172,7 +172,7 @@ export default function ProductsPage() {
                     </p>
                     <div className="flex items-center justify-between gap-2 pt-1">
                       <span className="text-lg font-bold" data-testid={`text-product-price-${product.id}`}>
-                        ${Number(product.price).toFixed(2)}
+                        ₹{Number(product.price).toFixed(2)}
                       </span>
                       <Button
                         size="sm"

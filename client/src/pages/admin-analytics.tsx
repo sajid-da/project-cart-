@@ -162,7 +162,7 @@ export default function AdminAnalytics() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="secondary">{c.orders} orders</Badge>
-                          <span className="font-semibold">${Number(c.spent).toFixed(2)}</span>
+                          <span className="font-semibold">₹{Number(c.spent).toFixed(2)}</span>
                         </div>
                       </div>
                     ))}

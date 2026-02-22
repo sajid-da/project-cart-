@@ -149,8 +149,8 @@ export default function AdminCoupons() {
                   <TableRow key={c.id} data-testid={`row-coupon-${c.id}`}>
                     <TableCell className="font-mono font-semibold">{c.code}</TableCell>
                     <TableCell><Badge variant="secondary">{c.discountType}</Badge></TableCell>
-                    <TableCell>{c.discountType === "percentage" ? `${c.discountValue}%` : `$${Number(c.discountValue).toFixed(2)}`}</TableCell>
-                    <TableCell>{c.minPurchase ? `$${Number(c.minPurchase).toFixed(2)}` : "-"}</TableCell>
+                    <TableCell>{c.discountType === "percentage" ? `${c.discountValue}%` : `₹${Number(c.discountValue).toFixed(2)}`}</TableCell>
+                    <TableCell>{c.minPurchase ? `₹${Number(c.minPurchase).toFixed(2)}` : "-"}</TableCell>
                     <TableCell>{c.usedCount}{c.maxUses ? ` / ${c.maxUses}` : ""}</TableCell>
                     <TableCell>
                       <Switch

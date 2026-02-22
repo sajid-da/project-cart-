@@ -86,7 +86,7 @@ export default function AdminOrders() {
                     <TableCell className="font-medium">#{order.id}</TableCell>
                     <TableCell>{order.user?.fullName || `User #${order.userId}`}</TableCell>
                     <TableCell>{order.itemCount || 0}</TableCell>
-                    <TableCell className="font-semibold">${Number(order.total).toFixed(2)}</TableCell>
+                    <TableCell className="font-semibold">₹{Number(order.total).toFixed(2)}</TableCell>
                     <TableCell>
                       <Badge variant={order.status === "completed" || order.status === "paid" ? "default" : order.status === "cancelled" ? "destructive" : "secondary"}>
                         {statusIcon(order.status)}

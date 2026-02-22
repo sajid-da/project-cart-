@@ -3,6 +3,12 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { authMiddleware, adminMiddleware, generateToken, hashPassword, comparePassword, type AuthRequest } from "./auth";
 import { loginSchema, registerSchema } from "@shared/schema";
+import OpenAI from "openai";
+
+const openai = new OpenAI({
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+});
 
 export async function registerRoutes(
   httpServer: Server,
@@ -171,7 +177,7 @@ export async function registerRoutes(
           return res.status(400).json({ message: "Coupon usage limit reached" });
         }
         if (coupon.minPurchase && subtotal < Number(coupon.minPurchase)) {
-          return res.status(400).json({ message: `Minimum purchase of $${coupon.minPurchase} required` });
+          return res.status(400).json({ message: `Minimum purchase of ₹${coupon.minPurchase} required` });
         }
 
         if (coupon.discountType === "percentage") {
@@ -383,6 +389,161 @@ export async function registerRoutes(
   app.get("/api/admin/fraud-logs", authMiddleware as any, adminMiddleware as any, async (req, res) => {
     const logs = await storage.getFraudLogs();
     res.json(logs);
+  });
+
+  // Barcode lookup - check local DB first, then Open Food Facts
+  app.get("/api/barcode/:barcode", authMiddleware as any, async (req, res) => {
+    try {
+      const { barcode } = req.params;
+
+      const localProduct = await storage.getProductByBarcode(barcode);
+      if (localProduct) {
+        return res.json({ source: "local", product: localProduct });
+      }
+
+      const response = await fetch(
+        `https://world.openfoodfacts.org/api/v2/product/${barcode}.json?fields=product_name,brands,categories,ingredients_text,nutriments,nutrition_grades,image_url,quantity`
+      );
+      const data = await response.json();
+
+      if (data.status === 1 && data.product) {
+        const p = data.product;
+        return res.json({
+          source: "openfoodfacts",
+          product: {
+            name: p.product_name || "Unknown Product",
+            brand: p.brands || "",
+            categories: p.categories || "",
+            ingredients: p.ingredients_text || "No ingredient information available",
+            nutrition: p.nutriments || {},
+            nutritionGrade: p.nutrition_grades || "",
+            imageUrl: p.image_url || "",
+            quantity: p.quantity || "",
+          },
+        });
+      }
+
+      res.status(404).json({ message: "Product not found. Try scanning a different barcode." });
+    } catch (err: any) {
+      res.status(500).json({ message: "Barcode lookup failed" });
+    }
+  });
+
+  // Offers
+  app.get("/api/offers", authMiddleware as any, async (req, res) => {
+    const activeOffers = await storage.getActiveOffers();
+    res.json(activeOffers);
+  });
+
+  app.get("/api/admin/offers", authMiddleware as any, adminMiddleware as any, async (req, res) => {
+    const allOffers = await storage.getOffers();
+    res.json(allOffers);
+  });
+
+  app.post("/api/admin/offers", authMiddleware as any, adminMiddleware as any, async (req, res) => {
+    try {
+      const offer = await storage.createOffer(req.body);
+      res.json(offer);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  // AI-powered product analysis
+  app.post("/api/ai/analyze-product", authMiddleware as any, async (req, res) => {
+    try {
+      const { productName, ingredients, barcode } = req.body;
+
+      const prompt = `You are a smart retail assistant for an Indian grocery store called SmartCart. Analyze the following product and provide a helpful response in JSON format.
+
+Product: ${productName}
+${ingredients ? `Ingredients: ${ingredients}` : ""}
+${barcode ? `Barcode: ${barcode}` : ""}
+
+Provide a JSON response with these fields:
+{
+  "healthScore": (number 1-10, 10 being healthiest),
+  "summary": (1-2 sentence summary of the product),
+  "benefits": (array of 3-4 health benefits),
+  "warnings": (array of any allergens or health warnings, empty if none),
+  "alternatives": (array of 2-3 healthier alternative product names available in Indian stores),
+  "funFact": (one interesting fact about this product or its ingredients)
+}`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-5-nano",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+      });
+
+      const analysis = JSON.parse(completion.choices[0]?.message?.content || "{}");
+      res.json(analysis);
+    } catch (err: any) {
+      res.status(500).json({ message: "AI analysis failed", error: err.message });
+    }
+  });
+
+  // AI-powered recommendations
+  app.get("/api/ai/recommendations", authMiddleware as any, async (req: AuthRequest, res) => {
+    try {
+      const userOrders = await storage.getUserOrders(req.userId!);
+      const allProducts = await storage.getProducts();
+      const activeOffers = await storage.getActiveOffers();
+
+      const purchasedItems = userOrders.flatMap((o: any) =>
+        o.items?.map((i: any) => i.product?.name).filter(Boolean) || []
+      );
+
+      const prompt = `You are a smart retail assistant for SmartCart, an Indian grocery store. Based on the customer's purchase history, recommend products they might like.
+
+Customer has purchased: ${purchasedItems.length > 0 ? purchasedItems.join(", ") : "No purchases yet (new customer)"}
+
+Available products in store:
+${allProducts.map(p => `- ${p.name} (₹${p.price})`).join("\n")}
+
+Current offers:
+${activeOffers.filter((o: any) => o.isApplicableToday).map((o: any) => `- ${o.name}: ${o.description}`).join("\n") || "No special offers today"}
+
+Provide a JSON response:
+{
+  "recommendations": [
+    {
+      "productName": "exact product name from list",
+      "reason": "why this is recommended (1 sentence)",
+      "priority": "high/medium/low"
+    }
+  ],
+  "tip": "One shopping tip for the customer (1 sentence)"
+}
+
+Recommend 4-6 products they haven't bought yet. Prioritize products with active offers.`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-5-nano",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+      });
+
+      const result = JSON.parse(completion.choices[0]?.message?.content || '{"recommendations":[],"tip":""}');
+
+      const enrichedRecs = result.recommendations?.map((rec: any) => {
+        const product = allProducts.find(p => p.name.toLowerCase() === rec.productName?.toLowerCase());
+        return { ...rec, product: product || null };
+      }).filter((r: any) => r.product) || [];
+
+      res.json({ recommendations: enrichedRecs, tip: result.tip || "" });
+    } catch (err: any) {
+      const fallbackProducts = await storage.getRecommendations(req.userId!);
+      res.json({
+        recommendations: fallbackProducts.map(p => ({
+          productName: p.name,
+          reason: "Popular product in our store",
+          priority: "medium",
+          product: p,
+        })),
+        tip: "Check out our weekend offers for great deals!",
+      });
+    }
   });
 
   return httpServer;

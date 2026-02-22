@@ -94,10 +94,10 @@ export default function OrdersPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-bold" data-testid={`text-order-total-${order.id}`}>
-                          ${Number(order.total).toFixed(2)}
+                          ₹{Number(order.total).toFixed(2)}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Tax: ${Number(order.tax).toFixed(2)}
+                          Tax: ₹{Number(order.tax).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -110,7 +110,7 @@ export default function OrdersPage() {
                               <span>{item.product?.name || `Product #${item.productId}`}</span>
                               <span className="text-muted-foreground">x{item.quantity}</span>
                             </div>
-                            <span className="font-medium">${(Number(item.price) * item.quantity).toFixed(2)}</span>
+                            <span className="font-medium">₹{(Number(item.price) * item.quantity).toFixed(2)}</span>
                           </div>
                         ))}
                       </div>

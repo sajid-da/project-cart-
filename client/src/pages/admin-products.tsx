@@ -233,7 +233,7 @@ export default function AdminProducts() {
                   <TableRow key={product.id} data-testid={`row-product-${product.id}`}>
                     <TableCell className="font-medium">{product.name}</TableCell>
                     <TableCell className="text-muted-foreground text-xs">{product.sku}</TableCell>
-                    <TableCell>${Number(product.price).toFixed(2)}</TableCell>
+                    <TableCell>₹{Number(product.price).toFixed(2)}</TableCell>
                     <TableCell>
                       {categories?.find((c: any) => c.id === product.categoryId)?.name || "-"}
                     </TableCell>

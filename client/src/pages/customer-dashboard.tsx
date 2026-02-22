@@ -60,7 +60,7 @@ export default function CustomerDashboard() {
     },
     {
       title: "Total Spent",
-      value: `$${Number(stats?.totalSpent ?? 0).toFixed(2)}`,
+      value: `₹${Number(stats?.totalSpent ?? 0).toFixed(2)}`,
       label: "lifetime",
       icon: TrendingUp,
       color: "text-chart-4",
@@ -151,7 +151,7 @@ export default function CustomerDashboard() {
                 >
                   <div className="flex items-center justify-between gap-1">
                     <span className="font-medium text-sm truncate">{product.name}</span>
-                    <Badge variant="secondary">${Number(product.price).toFixed(2)}</Badge>
+                    <Badge variant="secondary">₹{Number(product.price).toFixed(2)}</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>
                 </div>

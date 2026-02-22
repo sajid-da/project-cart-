@@ -51,7 +51,7 @@ export default function AdminDashboard() {
   });
 
   const statCards = [
-    { title: "Total Revenue", value: `$${Number(stats?.totalRevenue ?? 0).toFixed(2)}`, icon: DollarSign, color: "text-chart-1" },
+    { title: "Total Revenue", value: `₹${Number(stats?.totalRevenue ?? 0).toFixed(2)}`, icon: DollarSign, color: "text-chart-1" },
     { title: "Total Orders", value: stats?.totalOrders ?? 0, icon: ShoppingCart, color: "text-chart-2" },
     { title: "Total Users", value: stats?.totalUsers ?? 0, icon: Users, color: "text-chart-3" },
     { title: "Total Products", value: stats?.totalProducts ?? 0, icon: Package, color: "text-chart-4" },
@@ -185,7 +185,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary">{product.sold} sold</Badge>
-                      <span className="text-sm font-semibold">${Number(product.revenue).toFixed(2)}</span>
+                      <span className="text-sm font-semibold">₹{Number(product.revenue).toFixed(2)}</span>
                     </div>
                   </div>
                 ))}
