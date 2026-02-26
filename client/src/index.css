@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+#replit-badge,
+iframe[src*="replit"] {
+  display: none !important;
+}
+
 /* LIGHT MODE */
 :root {
   --button-outline: rgba(0,0,0, .10);
