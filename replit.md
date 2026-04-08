@@ -48,7 +48,7 @@ shared/
 - **Inventory**: Stock levels, low stock alerts, restock functionality
 - **Fraud Detection**: Risk scoring based on transaction patterns
 - **Coupons**: Percentage/fixed discounts with usage limits
-- **Store Map Navigation**: Product search → animated navigation path on canvas floor plan; click sections or search product names (maggi, milk, chips…) to get directions; GPS live tracking
+- **Store Map Navigation**: GPS-integrated 3D warehouse (Three.js/React Three Fiber); real GPS → 3D coordinates via `gpsTo3D()` conversion (store anchor: Bangalore 12.9716, 77.5946); 3D procedural warehouse with shelves, walls, ceiling lights, entrance gate; glowing user sphere tracks GPS in real-time; color-coded section zones + HTML labels; dashed navigation path + destination beacon; product search (50+ items mapped); WebGL fallback to 2D animated canvas when unavailable
 - **Dashboard Video**: Real Pexels grocery store video background (muted, looping) behind customer dashboard with gradient overlay for readability
 
 ## Test Accounts
