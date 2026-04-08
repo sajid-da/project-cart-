@@ -4,13 +4,14 @@
 Cloud-native Smart Retail Cart system with intelligent product scanning, real-time billing, AI-powered recommendations, fraud detection, inventory management, and analytics dashboard. Built for the Indian market with INR pricing, Indian products, and barcode scanning. Built with React + Express + PostgreSQL.
 
 ## Architecture
-- **Frontend**: React + Tailwind CSS + shadcn/ui + Recharts + Framer Motion
+- **Frontend**: React + Tailwind CSS + shadcn/ui + Recharts + Framer Motion + React Three Fiber (3D)
 - **Backend**: Express.js REST API with JWT authentication
 - **Database**: PostgreSQL via Drizzle ORM
-- **Auth**: JWT tokens with bcrypt password hashing, role-based access (customer/manager/admin)
+- **Auth**: JWT tokens (30-day expiry) with bcrypt password hashing, role-based access (customer/manager/admin), auto-clear expired tokens, auto-logout on 401
 - **AI**: OpenAI via Replit AI Integrations (gpt-5-nano) for product analysis and recommendations
 - **Barcode**: html5-qrcode for camera scanning, Open Food Facts API for external product lookup
 - **Currency**: Indian Rupees (₹/INR)
+- **3D Landing**: React Three Fiber + Drei 3D interactive SmartCart model on login page (WebGL fallback to animated CSS cart)
 
 ## Project Structure
 ```
