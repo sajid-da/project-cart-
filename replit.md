@@ -48,6 +48,8 @@ shared/
 - **Inventory**: Stock levels, low stock alerts, restock functionality
 - **Fraud Detection**: Risk scoring based on transaction patterns
 - **Coupons**: Percentage/fixed discounts with usage limits
+- **Store Map Navigation**: Product search → animated navigation path on canvas floor plan; click sections or search product names (maggi, milk, chips…) to get directions; GPS live tracking
+- **Dashboard Video**: Real Pexels grocery store video background (muted, looping) behind customer dashboard with gradient overlay for readability
 
 ## Test Accounts
 - Admin: username `admin`, password `admin123` (Priya Sharma)
