@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Search, ShoppingCart, Plus, Package } from "lucide-react";
+import { ProductImage } from "@/components/product-image";
 import { motion } from "framer-motion";
 
 export default function ProductsPage() {
@@ -146,16 +147,8 @@ export default function ProductsPage() {
             >
               <Card className="hover-elevate group" data-testid={`card-product-${product.id}`}>
                 <CardContent className="p-4">
-                  <div className="aspect-square rounded-md bg-muted/50 flex items-center justify-center mb-3 relative">
-                    {product.imageUrl ? (
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="w-full h-full object-cover rounded-md"
-                      />
-                    ) : (
-                      <Package className="w-12 h-12 text-muted-foreground/30" />
-                    )}
+                  <div className="aspect-square rounded-md bg-muted/50 flex items-center justify-center mb-3 relative overflow-hidden">
+                    <ProductImage product={product} />
                     <Badge
                       variant="secondary"
                       className="absolute top-2 right-2"

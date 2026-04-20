@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { ProductImage } from "@/components/product-image";
 import {
   ShoppingCart,
   Trash2,
@@ -161,8 +162,8 @@ export default function CartPage() {
                 <Card data-testid={`card-cart-item-${item.id}`}>
                   <CardContent className="p-4 flex gap-4 items-center">
                     <div className="w-16 h-16 rounded-md bg-muted/50 flex items-center justify-center flex-shrink-0">
-                      {item.product?.imageUrl ? (
-                        <img src={item.product.imageUrl} alt={item.product?.name} className="w-full h-full object-cover rounded-md" />
+                      {item.product ? (
+                        <ProductImage product={item.product} className="w-full h-full object-cover rounded-md" />
                       ) : (
                         <Package className="w-6 h-6 text-muted-foreground/30" />
                       )}

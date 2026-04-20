@@ -349,9 +349,9 @@ export default function ScanPage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {scannedProduct.product.imageUrl && (
-                      <img src={scannedProduct.product.imageUrl} alt={scannedProduct.product.name} className="w-24 h-24 object-cover rounded-lg" />
-                    )}
+                    <div className="w-24 h-24">
+                      <ProductImage product={scannedProduct.product} className="w-24 h-24 object-cover rounded-lg" />
+                    </div>
                     <p className="text-sm"><span className="font-medium">Brand:</span> {scannedProduct.product.brand || "N/A"}</p>
                     <p className="text-sm"><span className="font-medium">Category:</span> {scannedProduct.product.categories || "N/A"}</p>
                     <p className="text-sm"><span className="font-medium">Quantity:</span> {scannedProduct.product.quantity || "N/A"}</p>

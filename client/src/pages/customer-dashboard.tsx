@@ -102,13 +102,13 @@ export default function CustomerDashboard() {
           loop
           playsInline
           className="absolute inset-0 w-full h-full object-cover"
-          style={{ opacity: 0.09 }}
+          style={{ opacity: 0.55 }}
           data-testid="video-store-bg"
         >
           <source src="/videos/store.mp4" type="video/mp4" />
           <source src="/videos/store2.mp4" type="video/mp4" />
         </video>
-        <div className="absolute inset-0 bg-gradient-to-br from-background/90 via-background/75 to-background/90" />
+        <div className="absolute inset-0 bg-gradient-to-br from-background/55 via-background/35 to-background/55" />
       </div>
 
       {/* Main content */}

@@ -11,7 +11,9 @@ import {
   TrendingUp,
   AlertTriangle,
   BarChart3,
+  Radio,
 } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   BarChart,
@@ -38,8 +40,12 @@ const CHART_COLORS = [
 
 export default function AdminDashboard() {
   const { token } = useAuth();
+  const [pulseId, setPulseId] = useState(0);
+  const lastRevenueRef = useRef<number | null>(null);
+  const lastOrdersRef = useRef<number | null>(null);
+  const [flash, setFlash] = useState<{ revenue: boolean; orders: boolean }>({ revenue: false, orders: false });
 
-  const { data: stats, isLoading } = useQuery<any>({
+  const { data: stats, isLoading, dataUpdatedAt } = useQuery<any>({
     queryKey: ["/api/admin/dashboard"],
     queryFn: async () => {
       const res = await fetch("/api/admin/dashboard", {
@@ -48,24 +54,72 @@ export default function AdminDashboard() {
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
+    refetchInterval: 3000,
+    refetchIntervalInBackground: true,
   });
 
+  useEffect(() => {
+    if (!stats) return;
+    const rev = Number(stats.totalRevenue ?? 0);
+    const ord = Number(stats.totalOrders ?? 0);
+    const revChanged = lastRevenueRef.current !== null && rev !== lastRevenueRef.current;
+    const ordChanged = lastOrdersRef.current !== null && ord !== lastOrdersRef.current;
+    if (revChanged || ordChanged) {
+      setFlash({ revenue: revChanged, orders: ordChanged });
+      setPulseId((p) => p + 1);
+      const t = setTimeout(() => setFlash({ revenue: false, orders: false }), 1500);
+      return () => clearTimeout(t);
+    }
+    lastRevenueRef.current = rev;
+    lastOrdersRef.current = ord;
+  }, [stats]);
+
+  useEffect(() => {
+    if (stats) {
+      lastRevenueRef.current = Number(stats.totalRevenue ?? 0);
+      lastOrdersRef.current = Number(stats.totalOrders ?? 0);
+    }
+  }, [pulseId]);
+
+  const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
+
   const statCards = [
-    { title: "Total Revenue", value: `₹${Number(stats?.totalRevenue ?? 0).toFixed(2)}`, icon: DollarSign, color: "text-chart-1" },
-    { title: "Total Orders", value: stats?.totalOrders ?? 0, icon: ShoppingCart, color: "text-chart-2" },
-    { title: "Total Users", value: stats?.totalUsers ?? 0, icon: Users, color: "text-chart-3" },
-    { title: "Total Products", value: stats?.totalProducts ?? 0, icon: Package, color: "text-chart-4" },
-    { title: "Active Carts", value: stats?.activeCarts ?? 0, icon: ShoppingCart, color: "text-chart-5" },
-    { title: "Fraud Alerts", value: stats?.fraudAlerts ?? 0, icon: AlertTriangle, color: "text-destructive" },
+    { title: "Total Revenue", value: `₹${Number(stats?.totalRevenue ?? 0).toFixed(2)}`, icon: DollarSign, color: "text-chart-1", flashing: flash.revenue },
+    { title: "Total Orders", value: stats?.totalOrders ?? 0, icon: ShoppingCart, color: "text-chart-2", flashing: flash.orders },
+    { title: "Total Users", value: stats?.totalUsers ?? 0, icon: Users, color: "text-chart-3", flashing: false },
+    { title: "Total Products", value: stats?.totalProducts ?? 0, icon: Package, color: "text-chart-4", flashing: false },
+    { title: "Active Carts", value: stats?.activeCarts ?? 0, icon: ShoppingCart, color: "text-chart-5", flashing: false },
+    { title: "Fraud Alerts", value: stats?.fraudAlerts ?? 0, icon: AlertTriangle, color: "text-destructive", flashing: false },
   ];
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Admin Dashboard</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Overview of your retail system performance
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Admin Dashboard</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Real-time overview of your retail system — auto-refreshing every 3 seconds
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge
+            variant="outline"
+            className="gap-1.5 border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-400 px-3 py-1.5"
+            data-testid="badge-live"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+            </span>
+            <Radio className="w-3 h-3" />
+            <span className="font-semibold">LIVE</span>
+          </Badge>
+          {lastUpdated && (
+            <span className="text-xs text-muted-foreground" data-testid="text-last-updated">
+              Updated {lastUpdated.toLocaleTimeString()}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -76,10 +130,15 @@ export default function AdminDashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.08 }}
           >
-            <Card>
+            <Card className={`transition-all duration-500 ${stat.flashing ? "ring-2 ring-green-500 shadow-lg shadow-green-500/30 scale-[1.02]" : ""}`}>
               <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                   {stat.title}
+                  {stat.flashing && (
+                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-green-500/40 text-green-600 dark:text-green-400 animate-pulse">
+                      NEW
+                    </Badge>
+                  )}
                 </CardTitle>
                 <stat.icon className={`w-4 h-4 ${stat.color}`} />
               </CardHeader>
@@ -87,7 +146,7 @@ export default function AdminDashboard() {
                 {isLoading ? (
                   <Skeleton className="h-8 w-24" />
                 ) : (
-                  <div className="text-2xl font-bold" data-testid={`text-admin-${stat.title.toLowerCase().replace(/\s/g, "-")}`}>
+                  <div className={`text-2xl font-bold transition-colors ${stat.flashing ? "text-green-600 dark:text-green-400" : ""}`} data-testid={`text-admin-${stat.title.toLowerCase().replace(/\s/g, "-")}`}>
                     {stat.value}
                   </div>
                 )}
