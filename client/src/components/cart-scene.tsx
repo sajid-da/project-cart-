@@ -78,7 +78,22 @@ export default function CartScene({ onCartClick }: { onCartClick: () => void }) 
   const [hovered, setHovered] = useState(false);
 
   if (!checkWebGL()) {
-    throw new Error("WebGL not available");
+    return (
+      <button
+        type="button"
+        onClick={onCartClick}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className="flex h-80 w-full items-center justify-center rounded-3xl border border-white/20 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white shadow-2xl"
+        data-testid="button-cart-fallback"
+      >
+        <div className="text-center">
+          <div className="text-6xl">{hovered ? "🛒" : "🛍️"}</div>
+          <div className="mt-3 text-lg font-semibold">Click the cart to begin</div>
+          <div className="mt-1 text-sm opacity-90">3D view unavailable on this device</div>
+        </div>
+      </button>
+    );
   }
 
   return (
