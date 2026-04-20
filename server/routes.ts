@@ -152,6 +152,43 @@ export async function registerRoutes(
     }
   });
 
+  // Validate a coupon code (returns discount preview)
+  app.post("/api/coupon/validate", authMiddleware as any, async (req: AuthRequest, res) => {
+    try {
+      const { code, subtotal } = req.body;
+      if (!code) return res.status(400).json({ valid: false, message: "Coupon code is required" });
+      const coupon = await storage.getCouponByCode(String(code).trim().toUpperCase());
+      if (!coupon || !coupon.isActive) {
+        return res.status(404).json({ valid: false, message: "Invalid coupon code" });
+      }
+      if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
+        return res.status(400).json({ valid: false, message: "Coupon usage limit reached" });
+      }
+      const sub = Number(subtotal || 0);
+      if (coupon.minPurchase && sub < Number(coupon.minPurchase)) {
+        return res.status(400).json({
+          valid: false,
+          message: `Minimum purchase of ₹${coupon.minPurchase} required (your subtotal is ₹${sub.toFixed(2)})`,
+        });
+      }
+      const discount = coupon.discountType === "percentage"
+        ? sub * (Number(coupon.discountValue) / 100)
+        : Math.min(Number(coupon.discountValue), sub);
+      res.json({
+        valid: true,
+        code: coupon.code,
+        discountType: coupon.discountType,
+        discountValue: Number(coupon.discountValue),
+        discount: Math.round(discount * 100) / 100,
+        message: coupon.discountType === "percentage"
+          ? `${coupon.discountValue}% off applied — you save ₹${discount.toFixed(2)}!`
+          : `₹${coupon.discountValue} flat off applied!`,
+      });
+    } catch (err: any) {
+      res.status(500).json({ valid: false, message: err.message });
+    }
+  });
+
   // Checkout
   app.post("/api/checkout", authMiddleware as any, async (req: AuthRequest, res) => {
     try {
@@ -193,25 +230,29 @@ export async function registerRoutes(
       const total = subtotal - discount + tax;
 
       // Fraud check
-      const riskScore = calculateFraudRisk(subtotal, items.length, req.userId!);
+      const { score: riskScore, reasons } = calculateFraudRisk(subtotal, items.length, req.userId!);
+      let action: "passed" | "monitored" | "flagged" | "blocked" = "passed";
+      let reason = "Routine transaction — passed all checks";
       if (riskScore >= 75) {
-        await storage.createFraudLog({
-          userId: req.userId,
-          riskScore: String(riskScore),
-          reason: "High risk transaction detected",
-          action: "blocked",
-          details: { subtotal, itemCount: items.length },
-        });
-        return res.status(400).json({ message: "Transaction flagged for review. Please contact support." });
+        action = "blocked";
+        reason = `High risk: ${reasons.join(", ")}`;
+      } else if (riskScore >= 50) {
+        action = "flagged";
+        reason = `Elevated risk: ${reasons.join(", ")}`;
+      } else if (riskScore >= 25) {
+        action = "monitored";
+        reason = `Low-medium risk: ${reasons.join(", ")}`;
       }
-      if (riskScore >= 40) {
-        await storage.createFraudLog({
-          userId: req.userId,
-          riskScore: String(riskScore),
-          reason: "Elevated risk transaction",
-          action: "flagged",
-          details: { subtotal, itemCount: items.length },
-        });
+      // Log every transaction for the fraud dashboard
+      await storage.createFraudLog({
+        userId: req.userId,
+        riskScore: String(riskScore),
+        reason,
+        action,
+        details: { subtotal, itemCount: items.length, reasons },
+      });
+      if (action === "blocked") {
+        return res.status(400).json({ message: "Transaction flagged for review. Please contact support." });
       }
 
       const order = await storage.createOrder({
@@ -558,17 +599,27 @@ Recommend 4-6 products they haven't bought yet. Prioritize products with active 
   return httpServer;
 }
 
-function calculateFraudRisk(amount: number, itemCount: number, userId: number): number {
+function calculateFraudRisk(amount: number, itemCount: number, userId: number): { score: number; reasons: string[] } {
   let risk = 0;
+  const reasons: string[] = [];
 
-  if (amount > 500) risk += 20;
-  if (amount > 1000) risk += 15;
-  if (amount > 2000) risk += 20;
+  // Amount-based signals (lower thresholds for INR market)
+  if (amount > 200)  { risk += 8;  reasons.push("cart over ₹200"); }
+  if (amount > 500)  { risk += 12; reasons.push("cart over ₹500"); }
+  if (amount > 1000) { risk += 15; reasons.push("cart over ₹1000"); }
+  if (amount > 2500) { risk += 20; reasons.push("high-value cart > ₹2500"); }
+  if (amount > 5000) { risk += 15; reasons.push("very high-value cart > ₹5000"); }
 
-  if (itemCount > 10) risk += 10;
-  if (itemCount > 20) risk += 15;
+  // Item-count signals
+  if (itemCount > 3)  { risk += 5;  reasons.push(`${itemCount} items`); }
+  if (itemCount > 8)  { risk += 10; reasons.push("8+ items"); }
+  if (itemCount > 15) { risk += 15; reasons.push("15+ items"); }
 
-  risk += Math.random() * 10;
+  // Variable behavioural signal (simulated velocity / device-fingerprint variance)
+  const variance = Math.round(Math.random() * 15);
+  if (variance > 0) { risk += variance; reasons.push(`behavioural variance +${variance}`); }
 
-  return Math.min(100, Math.round(risk));
+  if (reasons.length === 0) reasons.push("baseline check");
+
+  return { score: Math.min(100, Math.round(risk)), reasons };
 }

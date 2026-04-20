@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { ScanBarcode, Camera, ShoppingCart, Sparkles, X, Search, Loader2, AlertTriangle, CheckCircle2, Info } from "lucide-react";
+import { ProductImage } from "@/components/product-image";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ScannedProduct {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Suspense, Component } from "react";
 import type { ReactNode, ErrorInfo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Html, Line } from "@react-three/drei";
 import * as THREE from "three";
@@ -58,23 +59,77 @@ const SECTIONS = [
   { id: "checkout",  name: "Checkout",              emoji: "💳", color: "#14b8a6", pos3d: [25, 0, 55]  as [number,number,number], size: [18, 0, 10] as [number,number,number], shelves: 0 },
 ];
 
-// ─── Product → Section Mapping ───────────────────────────────────────────────
+// ─── Product → Section Mapping (fallback keywords) ───────────────────────────
 const PRODUCT_SECTION: Record<string, string> = {
-  broccoli:"fruits", tomato:"fruits", onion:"fruits", potato:"fruits",
+  // Fruits & Vegetables
+  broccoli:"fruits", tomato:"fruits", onion:"fruits", potato:"fruits", aloo:"fruits",
   apple:"fruits", banana:"fruits", mango:"fruits", grapes:"fruits", carrot:"fruits",
-  "amul butter":"dairy", milk:"dairy", curd:"dairy", paneer:"dairy",
-  cheese:"dairy", eggs:"dairy", yogurt:"dairy", ghee:"dairy", butter:"dairy", amul:"dairy",
+  spinach:"fruits", palak:"fruits", cucumber:"fruits", capsicum:"fruits", chilli:"fruits",
+  chili:"fruits", "green chilli":"fruits", lemon:"fruits", ginger:"fruits", garlic:"fruits",
+  cauliflower:"fruits", cabbage:"fruits", peas:"fruits", beans:"fruits", brinjal:"fruits",
+  fruits:"fruits", vegetables:"fruits", veggies:"fruits", "fruits & vegetables":"fruits",
+  // Dairy & Eggs
+  "amul butter":"dairy", milk:"dairy", curd:"dairy", paneer:"dairy", dahi:"dairy",
+  cheese:"dairy", eggs:"dairy", egg:"dairy", yogurt:"dairy", ghee:"dairy", butter:"dairy", amul:"dairy",
+  cream:"dairy", lassi:"dairy", buttermilk:"dairy", chaas:"dairy", dairy:"dairy",
+  // Grains & Staples
   rice:"grains", wheat:"grains", atta:"grains", dal:"grains", basmati:"grains",
   sugar:"grains", salt:"grains", flour:"grains", maggi:"grains", noodles:"grains",
-  chips:"snacks", namkeen:"snacks", "parle-g":"snacks", biscuit:"snacks",
-  haldirams:"snacks", lays:"snacks", kurkure:"snacks", popcorn:"snacks",
+  pasta:"grains", oats:"grains", poha:"grains", suji:"grains", rava:"grains",
+  besan:"grains", moong:"grains", chana:"grains", toor:"grains", urad:"grains",
+  grains:"grains", staples:"grains",
+  // Snacks
+  chips:"snacks", namkeen:"snacks", "parle-g":"snacks", biscuit:"snacks", biscuits:"snacks",
+  haldirams:"snacks", lays:"snacks", kurkure:"snacks", popcorn:"snacks", cookies:"snacks",
+  chocolate:"snacks", "5 star":"snacks", dairy_milk:"snacks", "dairy milk":"snacks",
+  kitkat:"snacks", oreo:"snacks", bourbon:"snacks", sweets:"snacks", mithai:"snacks",
+  bhujia:"snacks", aloo_bhujia:"snacks", snacks:"snacks",
+  // Beverages
   "tata tea":"beverages", coffee:"beverages", juice:"beverages", water:"beverages",
-  tea:"beverages", soda:"beverages", pepsi:"beverages", lassi:"beverages",
+  tea:"beverages", soda:"beverages", pepsi:"beverages", coke:"beverages", coca:"beverages",
+  sprite:"beverages", fanta:"beverages", thums:"beverages", maaza:"beverages", frooti:"beverages",
+  bisleri:"beverages", limca:"beverages", redbull:"beverages", horlicks:"beverages",
+  bournvita:"beverages", boost:"beverages", drinks:"beverages", beverages:"beverages",
+  // Spices
   "garam masala":"spices", turmeric:"spices", cumin:"spices", haldi:"spices",
-  masala:"spices", "mdh":"spices", coriander:"spices", jeera:"spices",
+  masala:"spices", "mdh":"spices", coriander:"spices", jeera:"spices", everest:"spices",
+  pepper:"spices", "red chilli":"spices", "chilli powder":"spices", "chili powder":"spices",
+  cardamom:"spices", elaichi:"spices", clove:"spices", laung:"spices", cinnamon:"spices",
+  dalchini:"spices", "bay leaf":"spices", "tej patta":"spices", papad:"spices",
+  pickle:"spices", achar:"spices", spices:"spices",
+  // Household
   soap:"household", detergent:"household", broom:"household", vim:"household",
+  surf:"household", harpic:"household", lizol:"household", phenyl:"household",
+  toilet:"household", cleaner:"household", "dish wash":"household", "dish soap":"household",
+  rin:"household", tide:"household", ariel:"household", household:"household",
+  // Personal Care
   shampoo:"personal", toothpaste:"personal", deo:"personal", "face wash":"personal",
-  lotion:"personal", conditioner:"personal",
+  lotion:"personal", conditioner:"personal", colgate:"personal", pepsodent:"personal",
+  toothbrush:"personal", razor:"personal", "shaving cream":"personal", talc:"personal",
+  powder:"personal", perfume:"personal", deodorant:"personal", dettol:"personal",
+  vaseline:"personal", nivea:"personal", ponds:"personal", lakme:"personal",
+  fairness:"personal", "face cream":"personal", sanitizer:"personal", handwash:"personal",
+  "hair oil":"personal", "coconut oil":"personal", parachute:"personal", personal:"personal",
+  // Frozen / Ready (mapped to snacks aisle for now)
+  icecream:"snacks", "ice cream":"snacks", "ice-cream":"snacks", kulfi:"snacks",
+  amul_kool:"snacks", frozen:"snacks", pizza:"snacks", "ready meal":"snacks",
+  // Baby
+  diaper:"personal", diapers:"personal", "baby food":"personal", cerelac:"personal",
+  pampers:"personal", huggies:"personal", baby:"personal",
+};
+
+// Map DB categoryId → 3D section id
+const CATEGORY_TO_SECTION: Record<number, string> = {
+  1: "fruits",     // Fruits & Vegetables
+  2: "dairy",      // Dairy & Eggs
+  3: "grains",     // Grains & Staples
+  4: "beverages",  // Beverages
+  5: "snacks",     // Snacks & Namkeen
+  6: "spices",     // Spices & Masala
+  7: "household",  // Household
+  8: "personal",   // Personal Care
+  9: "snacks",     // Frozen & Ready to Eat → snacks aisle
+  10: "personal",  // Baby & Kids → personal care
 };
 
 // ─── 3D Components ────────────────────────────────────────────────────────────
@@ -694,9 +749,14 @@ export default function StoreMapPage() {
 
   // Navigation
   const [searchQuery, setSearchQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<{ label: string; sectionId: string }[]>([]);
   const [targetSectionId, setTargetSectionId] = useState<string | null>(null);
   const [navigating, setNavigating] = useState(false);
+
+  // Live products from DB
+  const { data: allProducts } = useQuery<any[]>({
+    queryKey: ["/api/products"],
+  });
 
   const targetSection = useMemo(
     () => SECTIONS.find(s => s.id === targetSectionId) || null,
@@ -714,17 +774,64 @@ export default function StoreMapPage() {
     return pos[2] < 5 ? "Entrance" : "Aisle";
   }, []);
 
+  // ── Resolve a query to a section id (DB products → keywords → section names) ──
+  const resolveSection = useCallback((query: string): { sectionId: string; matchedName: string } | null => {
+    const q = query.toLowerCase().trim();
+    if (!q) return null;
+    // 1) Try real product DB — exact then partial match on name
+    if (allProducts && allProducts.length) {
+      const exact = allProducts.find(p => p.name?.toLowerCase() === q);
+      const partial = exact || allProducts.find(p => p.name?.toLowerCase().includes(q))
+        || allProducts.find(p => q.includes(p.name?.toLowerCase()));
+      if (partial && partial.categoryId && CATEGORY_TO_SECTION[partial.categoryId]) {
+        return { sectionId: CATEGORY_TO_SECTION[partial.categoryId], matchedName: partial.name };
+      }
+    }
+    // 2) Keyword map
+    if (PRODUCT_SECTION[q]) return { sectionId: PRODUCT_SECTION[q], matchedName: q };
+    for (const [k, v] of Object.entries(PRODUCT_SECTION)) {
+      if (k.includes(q) || q.includes(k)) return { sectionId: v, matchedName: k };
+    }
+    // 3) Section name match
+    for (const s of SECTIONS) {
+      if (s.name.toLowerCase().includes(q)) return { sectionId: s.id, matchedName: s.name };
+    }
+    return null;
+  }, [allProducts]);
+
   // ── Autocomplete ──
   useEffect(() => {
     if (searchQuery.length < 2) { setSuggestions([]); return; }
     const q = searchQuery.toLowerCase();
-    const matches = Object.keys(PRODUCT_SECTION).filter(k => k.includes(q)).slice(0, 6);
-    SECTIONS.forEach(s => {
-      if (s.name.toLowerCase().includes(q) && !matches.includes(s.name.toLowerCase()))
-        matches.push(s.name.toLowerCase());
-    });
-    setSuggestions(matches.slice(0, 6));
-  }, [searchQuery]);
+    const out: { label: string; sectionId: string }[] = [];
+    const seen = new Set<string>();
+
+    // Real DB products first
+    if (allProducts) {
+      for (const p of allProducts) {
+        if (out.length >= 6) break;
+        const name = (p.name || "").toLowerCase();
+        if (name.includes(q) && p.categoryId && CATEGORY_TO_SECTION[p.categoryId] && !seen.has(name)) {
+          seen.add(name);
+          out.push({ label: p.name, sectionId: CATEGORY_TO_SECTION[p.categoryId] });
+        }
+      }
+    }
+    // Keyword fallbacks
+    for (const k of Object.keys(PRODUCT_SECTION)) {
+      if (out.length >= 6) break;
+      if (k.includes(q) && !seen.has(k)) { seen.add(k); out.push({ label: k, sectionId: PRODUCT_SECTION[k] }); }
+    }
+    // Sections
+    for (const s of SECTIONS) {
+      if (out.length >= 6) break;
+      if (s.name.toLowerCase().includes(q) && !seen.has(s.name.toLowerCase())) {
+        seen.add(s.name.toLowerCase());
+        out.push({ label: s.name, sectionId: s.id });
+      }
+    }
+    setSuggestions(out);
+  }, [searchQuery, allProducts]);
 
   const navigateTo = useCallback((sectionId: string) => {
     setTargetSectionId(sectionId);
@@ -733,19 +840,14 @@ export default function StoreMapPage() {
   }, []);
 
   const handleSearch = useCallback((query: string) => {
-    const q = query.toLowerCase().trim();
-    if (!q) return;
-    const found = PRODUCT_SECTION[q];
-    if (found) { navigateTo(found); return; }
-    for (const [k, v] of Object.entries(PRODUCT_SECTION)) {
-      if (k.includes(q) || q.includes(k)) { navigateTo(v); return; }
+    const result = resolveSection(query);
+    if (result) {
+      navigateTo(result.sectionId);
+      return;
     }
-    for (const s of SECTIONS) {
-      if (s.name.toLowerCase().includes(q)) { navigateTo(s.id); return; }
-    }
-    setGpsError(`No results for "${query}". Try: milk, chips, maggi, turmeric…`);
+    setGpsError(`No results for "${query}". Try a product name or section.`);
     setTimeout(() => setGpsError(null), 3000);
-  }, [navigateTo]);
+  }, [navigateTo, resolveSection]);
 
   const clearNav = useCallback(() => {
     setTargetSectionId(null);
@@ -848,8 +950,9 @@ export default function StoreMapPage() {
                   exit={{ opacity: 0 }}
                   className="absolute top-full left-0 right-24 z-20 mt-1 bg-popover border rounded-lg shadow-lg overflow-hidden"
                 >
-                  {suggestions.map(s => {
-                    const sectionId = PRODUCT_SECTION[s] || SECTIONS.find(sec => sec.name.toLowerCase() === s)?.id;
+                  {suggestions.map((sug, idx) => {
+                    const s = sug.label;
+                    const sectionId = sug.sectionId;
                     const section = SECTIONS.find(sec => sec.id === sectionId);
                     return (
                       <button

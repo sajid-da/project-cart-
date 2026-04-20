@@ -29,6 +29,8 @@ export default function CartPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number; message: string } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
 
   const { data: cartData, isLoading } = useQuery<any>({
     queryKey: ["/api/cart"],
@@ -81,7 +83,7 @@ export default function CartPage() {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ couponCode: couponCode || undefined }),
+        body: JSON.stringify({ couponCode: appliedCoupon?.code || undefined }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -104,8 +106,9 @@ export default function CartPage() {
   const items = cartData?.items || [];
   const subtotal = items.reduce((sum: number, item: any) =>
     sum + Number(item.priceAtAdd) * item.quantity, 0);
-  const tax = subtotal * 0.08;
-  const total = subtotal + tax;
+  const discount = appliedCoupon ? Math.min(appliedCoupon.discount, subtotal) : 0;
+  const tax = (subtotal - discount) * 0.08;
+  const total = subtotal - discount + tax;
 
   if (isLoading) {
     return (
@@ -225,14 +228,67 @@ export default function CartPage() {
               <CardTitle className="text-lg">Order Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Tag className="w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Coupon code"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
-                  data-testid="input-coupon"
-                />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Coupon code (e.g. NAMASTE10)"
+                    value={couponCode}
+                    onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(null); }}
+                    disabled={!!appliedCoupon}
+                    data-testid="input-coupon"
+                  />
+                  {appliedCoupon ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => { setAppliedCoupon(null); setCouponCode(""); setCouponError(null); }}
+                      data-testid="button-remove-coupon"
+                    >
+                      Remove
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={!couponCode.trim() || subtotal <= 0}
+                      onClick={async () => {
+                        setCouponError(null);
+                        try {
+                          const res = await fetch("/api/coupon/validate", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                            body: JSON.stringify({ code: couponCode.trim(), subtotal }),
+                          });
+                          const data = await res.json();
+                          if (!res.ok || !data.valid) {
+                            setCouponError(data.message || "Invalid coupon");
+                            toast({ title: "Coupon error", description: data.message || "Invalid coupon", variant: "destructive" });
+                            return;
+                          }
+                          setAppliedCoupon({ code: data.code, discount: data.discount, message: data.message });
+                          toast({ title: "Coupon applied!", description: data.message });
+                        } catch (e: any) {
+                          setCouponError("Could not validate coupon");
+                        }
+                      }}
+                      data-testid="button-apply-coupon"
+                    >
+                      Apply
+                    </Button>
+                  )}
+                </div>
+                {appliedCoupon && (
+                  <div className="flex items-center justify-between text-xs px-1 py-1.5 rounded bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-900" data-testid="text-coupon-applied">
+                    <span>✓ {appliedCoupon.code} — {appliedCoupon.message}</span>
+                  </div>
+                )}
+                {couponError && !appliedCoupon && (
+                  <div className="text-xs text-destructive px-1" data-testid="text-coupon-error">{couponError}</div>
+                )}
+                <div className="text-[10px] text-muted-foreground px-1">
+                  Try: NAMASTE10, BACHAT50, DIWALI20, HOLI15, WELCOME100
+                </div>
               </div>
 
               <Separator />
@@ -242,6 +298,12 @@ export default function CartPage() {
                   <span className="text-muted-foreground">Subtotal</span>
                   <span data-testid="text-subtotal">₹{subtotal.toFixed(2)}</span>
                 </div>
+                {appliedCoupon && (
+                  <div className="flex justify-between text-green-600 dark:text-green-400">
+                    <span>Discount ({appliedCoupon.code})</span>
+                    <span data-testid="text-discount">-₹{appliedCoupon.discount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Tax (8%)</span>
                   <span data-testid="text-tax">₹{tax.toFixed(2)}</span>
