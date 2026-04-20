@@ -60,6 +60,15 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  try {
+    const { migrate } = await import("drizzle-orm/pglite/migrator");
+    const { db } = await import("./db");
+    await migrate(db, { migrationsFolder: "./migrations" });
+    console.log("Migrations ran successfully");
+  } catch (err) {
+    console.error("Migration error:", err);
+  }
+
   // Push schema and seed data
   const { seedDatabase } = await import("./seed");
   try {
@@ -102,7 +111,6 @@ app.use((req, res, next) => {
     {
       port,
       host: "0.0.0.0",
-      reusePort: true,
     },
     () => {
       log(`serving on port ${port}`);
