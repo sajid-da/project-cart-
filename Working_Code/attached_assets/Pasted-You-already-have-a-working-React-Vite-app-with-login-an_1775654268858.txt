@@ -1,0 +1,102 @@
+You already have a working React (Vite) app with login and dashboard. Modify ONLY the existing landing page to integrate a 3D Smart Cart interaction without breaking current routing or authentication flow.
+
+### Objective
+
+Enhance the landing page by adding an interactive 3D smart cart that triggers the existing login system when the user interacts with it.
+
+---
+
+### Requirements
+
+#### 1. Replace Existing Landing Page UI
+
+* Keep current routing intact (`/`, `/login`, `/dashboard`)
+* Modify only the landing page component (do not rebuild the app)
+
+---
+
+#### 2. Add 3D Smart Cart (React Three Fiber)
+
+* Use:
+
+  * @react-three/fiber
+  * @react-three/drei
+* Load a `.glb` shopping cart model from `/public/cart.glb`
+
+---
+
+#### 3. 3D Behavior
+
+* Cart should:
+
+  * Rotate slowly by default using `useFrame`
+  * Slightly scale up or tilt on hover
+  * On click:
+
+    * Animate forward or rotate quickly
+    * Then trigger login
+
+---
+
+#### 4. Login Integration (IMPORTANT)
+
+* DO NOT create a new login system
+* Use the existing login page/modal/component
+* On cart click:
+
+  * Either:
+
+    * Navigate to `/login`
+    * OR open existing login modal (if already implemented)
+* On successful login:
+
+  * Redirect to `/dashboard` (already exists)
+
+---
+
+#### 5. UI Overlay
+
+Add centered overlay text above canvas:
+
+* Title: “Smart Cart”
+* Subtitle: “Revolutionizing Retail Experience”
+* Instruction: “Click the cart to begin”
+
+Use absolute positioning over the canvas.
+
+---
+
+#### 6. Lighting & Scene
+
+* Add:
+
+  * ambientLight
+  * directionalLight
+* Enable OrbitControls:
+
+  * disable zoom
+  * allow slight rotation only
+
+---
+
+#### 7. Constraints
+
+* Do NOT modify backend or authentication logic
+* Do NOT duplicate pages
+* Do NOT create new routing structure
+* Only enhance landing page
+
+---
+
+#### 8. Expected Outcome
+
+* Landing page shows interactive 3D cart
+* User clicks cart → existing login flow starts
+* After login → dashboard opens (unchanged)
+* App runs with:
+  npm install
+  npm run dev
+
+---
+
+Generate only the modified Landing component and any small helper component needed (e.g., CartModel). Keep integration compatible with an existing React app.

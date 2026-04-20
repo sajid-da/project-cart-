@@ -1,0 +1,151 @@
+Edit the existing Map system to support **real-world location (GPS) + simulated 3D warehouse overlay**.
+
+DO NOT rebuild the app. Modify only the current Map logic.
+
+---
+
+## Objective
+
+* Use **real user location (GPS / browser geolocation)**
+* Show that position inside your system
+* BUT render a **fake 3D warehouse model aligned to that location**
+* Navigation should feel real-world, but visuals remain controlled
+
+---
+
+## Required Changes
+
+### 1. Get Real User Location (MANDATORY)
+
+Use browser geolocation:
+
+```js
+navigator.geolocation.getCurrentPosition((pos) => {
+  const { latitude, longitude } = pos.coords;
+});
+```
+
+Store as:
+
+```js
+const userGPS = { lat, lng };
+```
+
+---
+
+### 2. Define Warehouse Anchor Location
+
+Choose a fixed real-world location (example: a Walmart store or any coordinates):
+
+```js
+const storeLocation = {
+  lat: 12.9716,
+  lng: 77.5946
+};
+```
+
+This acts as the **origin of your 3D map**
+
+---
+
+### 3. Convert GPS → 3D Coordinates
+
+Map real-world coordinates into your 3D space:
+
+```js
+const convertTo3D = (lat, lng) => {
+  const scale = 10000; // adjust for sensitivity
+
+  return [
+    (lng - storeLocation.lng) * scale,
+    0,
+    (lat - storeLocation.lat) * scale
+  ];
+};
+```
+
+* This makes real GPS behave like movement inside your 3D warehouse
+
+---
+
+### 4. Sync User Position
+
+* Convert user GPS → 3D position
+* Update “You are here” marker in real-time
+
+```js
+const userPosition3D = convertTo3D(userGPS.lat, userGPS.lng);
+```
+
+---
+
+### 5. Product Locations (Still Fake but Mapped)
+
+Define product positions relative to store:
+
+```js
+const products = {
+  broccoli: { lat: storeLat + 0.00005, lng: storeLng + 0.00002 },
+};
+```
+
+Convert them to 3D using same function.
+
+---
+
+### 6. Navigation Logic
+
+* When user selects a product:
+
+  * Use real GPS start
+  * Use product GPS as destination
+  * Convert both → 3D
+  * Draw path between them
+
+---
+
+### 7. Real-Time Tracking (IMPORTANT)
+
+Use:
+
+```js
+navigator.geolocation.watchPosition(...)
+```
+
+* Continuously update user position
+* Move marker smoothly in 3D scene
+
+---
+
+### 8. Camera Behavior
+
+* Camera follows user position
+* Slight offset (top + behind)
+* Smooth transitions
+
+---
+
+### 9. Constraints
+
+* DO NOT use Google Maps UI
+* DO NOT render 2D maps
+* Only use GPS data for logic
+* Visual map remains 3D warehouse model
+
+---
+
+## Expected Result
+
+* User’s real-world movement affects position in 3D map
+* Warehouse appears mapped to a real location
+* Navigation feels real, but visuals are controlled
+* Hybrid system: **real GPS + fake 3D environment**
+
+---
+
+Generate only:
+
+* Updated Map logic
+* GPS integration
+* Coordinate conversion system
+* Do not modify unrelated parts of the app
