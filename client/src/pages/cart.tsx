@@ -11,6 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { ProductImage } from "@/components/product-image";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import phonepeQrUrl from "@assets/scanner_1776655975041.jpeg";
 import {
   ShoppingCart,
   Trash2,
@@ -70,6 +72,9 @@ export default function CartPage() {
       toast({ title: "Item removed" });
     },
   });
+
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentStage, setPaymentStage] = useState<"scan" | "verifying">("scan");
 
   const checkout = useMutation({
     mutationFn: async () => {
@@ -250,7 +255,7 @@ export default function CartPage() {
 
               <Button
                 className="w-full"
-                onClick={() => checkout.mutate()}
+                onClick={() => { setPaymentStage("scan"); setPaymentOpen(true); }}
                 disabled={checkout.isPending}
                 data-testid="button-checkout"
               >
@@ -262,7 +267,7 @@ export default function CartPage() {
                 ) : (
                   <span className="flex items-center gap-2">
                     <CreditCard className="w-4 h-4" />
-                    Checkout
+                    Pay with PhonePe
                   </span>
                 )}
               </Button>
@@ -270,6 +275,91 @@ export default function CartPage() {
           </Card>
         </div>
       </div>
+
+      <Dialog
+        open={paymentOpen}
+        onOpenChange={(o) => { if (!checkout.isPending) setPaymentOpen(o); }}
+      >
+        <DialogContent className="sm:max-w-md" data-testid="dialog-phonepe-payment">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="w-7 h-7 rounded-full bg-[#5f259f] text-white text-xs font-bold flex items-center justify-center">
+                पे
+              </span>
+              Pay ₹{total.toFixed(2)} via PhonePe
+            </DialogTitle>
+            <DialogDescription>
+              {paymentStage === "scan"
+                ? "Open PhonePe / Google Pay / Paytm on your phone, scan the QR below, and complete the payment. Then click ‘Done’ to confirm your order."
+                : "Verifying your payment with the bank…"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center gap-4 py-3">
+            <div className="relative bg-white p-3 rounded-xl border-2 border-[#5f259f]/30 shadow-lg">
+              <img
+                src={phonepeQrUrl}
+                alt="PhonePe payment QR"
+                className="w-64 h-64 object-contain"
+                data-testid="img-phonepe-qr"
+              />
+              {paymentStage === "verifying" && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-xl">
+                  <div className="w-12 h-12 border-4 border-[#5f259f] border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+            </div>
+
+            <div className="text-center space-y-1">
+              <div className="text-2xl font-bold text-[#5f259f]" data-testid="text-pay-amount">
+                ₹{total.toFixed(2)}
+              </div>
+              <div className="text-xs text-muted-foreground">SmartCart Superstore • Bangalore</div>
+              <div className="text-[11px] text-muted-foreground">UPI ID: smartcart@ybl</div>
+            </div>
+
+            <div className="w-full grid grid-cols-3 gap-2 text-[10px] text-muted-foreground text-center">
+              <div className="border rounded-md py-1.5">PhonePe</div>
+              <div className="border rounded-md py-1.5">Google Pay</div>
+              <div className="border rounded-md py-1.5">Paytm</div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setPaymentOpen(false)}
+              disabled={checkout.isPending}
+              data-testid="button-cancel-payment"
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#5f259f] hover:bg-[#4a1d7a] text-white"
+              onClick={() => {
+                setPaymentStage("verifying");
+                setTimeout(() => {
+                  checkout.mutate(undefined, {
+                    onSuccess: () => setPaymentOpen(false),
+                    onError: () => setPaymentStage("scan"),
+                  });
+                }, 1200);
+              }}
+              disabled={checkout.isPending || paymentStage === "verifying"}
+              data-testid="button-payment-done"
+            >
+              {paymentStage === "verifying" || checkout.isPending ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  Verifying…
+                </span>
+              ) : (
+                "✓ Done — I've Paid"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
